@@ -1,1 +1,46 @@
+name: Cainiao Scraper (cron)
+
+on:
+  workflow_dispatch: {}       # manual start
+  schedule:
+    - cron: "*/15 * * * *"    # every 15 min (UTC)
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+
+      - name: Setup Node.js
+        uses: actions/setup-node@8f152de45cc393bb48ce5d89d36b731f54556e65
+        with:
+          node-version: '18'   # Puppeteer 22 üçün uyğundur
+
+      - name: Install Chromium deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libxss1 fonts-liberation \
+            libatk-bridge2.0-0 libatk1.0-0 libcups2 libdrm2 \
+            libxkbcommon0 libgbm1 libgtk-3-0 libxshmfence1 || true
+
+      - name: Install dependencies
+        run: npm ci || npm i
+
+      - name: Run scraper
+        run: node scraper.js
+        env:
+          SHEET_WEBAPP_URL: ${{ secrets.SHEET_WEBAPP_URL }}
+          SHEET_SECRET: ${{ secrets.SHEET_SECRET }}
+
+      - name: Upload debug (if any)
+        if: always()
+        uses: actions/upload-artifact@604373da6381bf24206979c74d06a550515601b9
+        with:
+          name: debug
+          path: debug/
+          if-no-files-found: ignore
 
